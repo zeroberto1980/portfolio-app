@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#0d1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Portfolio Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+    :root {
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #1c2128;
+      --bg4: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --text3: #484f58;
+      --accent: #58a6ff;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --purple: #bc8cff;
+      --orange: #ffa657;
+      --c1: #58a6ff;
+      --c2: #3fb950;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .header-title {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 14px; font-weight: 600;
+      color: var(--accent); letter-spacing: 0.05em;
+    }
+    .header-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+    .refresh-btn {
+      background: var(--bg4); border: 1px solid var(--border);
+      color: var(--text2); padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn.loading { opacity: 0.5; pointer-events: none; }
+    .spin { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* TABS */
+    .tabs {
+      display: flex; gap: 0; padding: 12px 16px 0;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 8px 16px; font-size: 13px; font-weight: 500;
+      border: none; background: none; color: var(--text2);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      white-space: nowrap; transition: all 0.15s;
+    }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab:hover { color: var(--text); }
+
+    /* MAIN */
+    main { padding: 16px; max-width: 900px; margin: 0 auto; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* SUMMARY CARDS */
+    .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px;
+    }
+    .card-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .card-value { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 600; }
+    .card-value.pos { color: var(--green); }
+    .card-value.neg { color: var(--red); }
+    .card-value.neu { color: var(--text); }
+    .card-sub { font-size: 11px; color: var(--text2); margin-top: 3px; }
+
+    /* PORTFOLIO SELECTOR */
+    .portfolio-selector {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .psel-btn {
+      flex: 1; padding: 10px; border-radius: 8px;
+      border: 2px solid var(--border); background: var(--bg2);
+      color: var(--text2); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .psel-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(88,166,255,0.08); }
+    .psel-btn span { display: block; font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+
+    /* TABLE */
+    .table-wrap { overflow-x: auto; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th {
+      text-align: left; padding: 8px 10px;
+      font-size: 10px; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      border-bottom: 1px solid var(--border);
+      font-weight: 500; white-space: nowrap;
+    }
+    thead th.right { text-align: right; }
+    tbody tr { border-bottom: 1px solid rgba(48,54,61,0.5); transition: background 0.1s; }
+    tbody tr:hover { background: var(--bg3); }
+    tbody td { padding: 10px 10px; vertical-align: middle; }
+    tbody td.right { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+    .ticker-cell { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent); font-size: 12px; }
+    .name-cell { color: var(--text2); font-size: 12px; }
+    .pos-pct { color: var(--green); }
+    .neg-pct { color: var(--red); }
+    .badge {
+      display: inline-block; padding: 2px 6px; border-radius: 4px;
+      font-size: 10px; font-weight: 600; font-family: 'IBM Plex Mono', monospace;
+    }
+    .badge-etf { background: rgba(188,140,255,0.15); color: var(--purple); }
+    .badge-stock { background: rgba(88,166,255,0.15); color: var(--accent); }
+    .badge-bond { background: rgba(255,166,87,0.15); color: var(--orange); }
+
+    /* ACTION BUTTONS */
+    .act-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text3); padding: 4px; border-radius: 4px;
+      font-size: 14px; transition: all 0.15s; line-height: 1;
+    }
+    .act-btn:hover { color: var(--text); background: var(--bg4); }
+    .act-btn.del:hover { color: var(--red); }
+    .acts { display: flex; gap: 2px; justify-content: flex-end; }
+
+    /* PRICE LOADING */
+    .price-loading { color: var(--text3); font-style: italic; font-size: 12px; }
+    .price-error { color: var(--red); font-size: 11px; }
+    .price-ok { color: var(--text); }
+
+    /* ADD FORM */
+    .add-panel {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; margin-bottom: 20px;
+    }
+    .add-panel h3 {
+      font-size: 13px; font-weight: 600; margin-bottom: 14px;
+      color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-row.triple { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+    input, select {
+      background: var(--bg3); border: 1px solid var(--border);
+      color: var(--text); padding: 8px 10px; border-radius: 6px;
+      font-size: 13px; font-family: 'IBM Plex Sans', sans-serif;
+      outline: none; transition: border-color 0.15s;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    select option { background: var(--bg3); }
+    .hint { font-size: 10px; color: var(--text3); }
+
+    .btn-primary {
+      background: var(--accent); color: #000;
+      border: none; padding: 9px 20px; border-radius: 6px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: opacity 0.15s; font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary {
+      background: var(--bg4); color: var(--text2);
+      border: 1px solid var(--border); padding: 9px 16px; border-radius: 6px;
+      font-size: 13px; cursor: pointer; transition: all 0.15s;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .btn-secondary:hover { border-color: var(--text2); color: var(--text); }
+
+    /* CHART SECTION */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 600px) { .chart-grid { grid-template-columns: 1fr; } .cards { grid-template-columns: 1fr 1fr; } .form-row.triple { grid-template-columns: 1fr 1fr; } }
+    .chart-box {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px;
+    }
+    .chart-box h3 { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    .chart-box.full { grid-column: 1 / -1; }
+    canvas { max-height: 280px; }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); z-index: 200;
+      align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px; width: 90%; max-width: 420px;
+    }
+    .modal h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+
+    /* STATUS */
+    .status-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--bg2); border-top: 1px solid var(--border);
+      padding: 6px 16px; font-size: 11px; color: var(--text3);
+      font-family: 'IBM Plex Mono', monospace;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); display: inline-block; margin-right: 6px; }
+    .status-dot.ok { background: var(--green); }
+    .status-dot.err { background: var(--red); }
+    .status-dot.loading { background: var(--yellow); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    pb { padding-bottom: 60px; }
+    .empty { text-align: center; padding: 40px; color: var(--text3); font-size: 13px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .section-header h2 { font-size: 14px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* source info */
+    .src-tag { font-size: 9px; color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+    .last-update { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">▸ PORTFOLIO TRACKER</div>
+    <div class="header-sub" id="lastUpdateLabel">Ostatnia aktualizacja: —</div>
+  </div>
+  <button class="refresh-btn" id="refreshBtn" onclick="refreshAllPrices()">
+    <span id="refreshIcon">↻</span> Odśwież ceny
+  </button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="tab" onclick="switchTab('emakler')">eMakler mBank</button>
+  <button class="tab" onclick="switchTab('ike')">IKE XTB</button>
+  <button class="tab" onclick="switchTab('charts')">Wykresy</button>
+  <button class="tab" onclick="switchTab('settings')">Ustawienia</button>
+</div>
+
+<main>
+  <pb></pb>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="section active">
+    <div class="cards" id="dashCards"></div>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>eMakler mBank — skład</h3>
+        <canvas id="pie1"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>IKE XTB — skład</h3>
+        <canvas id="pie2"></canvas>
+      </div>
+      <div class="chart-box full">
+        <h3>Porównanie portfeli — wartość</h3>
+        <canvas id="barCompare"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMAKLER -->
+  <div id="tab-emakler" class="section">
+    <div class="add-panel">
+      <h3>Dodaj instrument — eMakler mBank</h3>
+      <div class="form-row">
+        <div class="field">
+          <label>Ticker *</label>
+          <input id="e-ticker" placeholder="np. PKN, CDR, ETFSP500" style="text-transform:uppercase" />
+          <span class="hint">GPW: PKN | Yahoo: PKN.WA | ETF: ETFSP500.WA</span>
+        </div>
+        <div class="field">
+          <label>Nazwa</label>
+          <input id="e-name" placeholder="PKN Orlen" />
+        </div>
+      </div>
+      <div class="form-row triple">
+        <div class="field">
+          <label>Ilość</label>
+          <input id="e-qty" type="number" placeholder="10" />
+        </div>
+        <div class="field">
+          <label>Cena zakupu (PLN)</label>
+          <input id="e-price" type="number" step="0.01" placeholder="50.00" />
+        </div>
+        <div class="field">
+          <label>Typ</label>
+          <select id="e-type">
+            <option value="stock">Akcja</option>
+            <option value="etf">ETF</option>
+            <option value="bond">Obligacja</option>
+            <option value="other">Inne</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Źródło cen</label>
+          <select id="e-source">
+            <option value="stooq">Stooq (GPW)</option>
+            <option value="yahoo">Yahoo Finance</option>
+            <option value="manual">Ręcznie</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Waluta</label>
+          <select id="e-currency">
+            <option value="PLN">PLN</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addInstrument('emakler')">+ Dodaj instrument</button>
+    </div>
+
+    <div class="section-header">
+      <h2>Instrumenty</h2>
+      <span id="emakler-total" style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--accent)"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="table-emakler">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Nazwa</th><th>Typ</th>
+            <th class="right">Ilość</th>
+            <th class="right">Cena zakupu</th>
+            <th class="right">Cena akt.</th>
+            <th class="right">Wartość</th>
+            <th class="right">Zmiana</th>
+            <th class="right">Akcje</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-emakler"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- IKE -->
+  <div id="tab-ike" class="section">
+    <div class="add-panel">
+      <h3>Dodaj instrument — IKE XTB</h3>
+      <div class="form-row">
+        <div class="field">
+          <label>Ticker *</label>
+          <input id="i-ticker" placeholder="np. XTB, GPW, CSPX" style="text-transform:uppercase" />
+          <span class="hint">GPW: XTB | Yahoo: XTB.WA | ETF Zagr: CSPX (Yahoo)</span>
+        </div>
+        <div class="field">
+          <label>Nazwa</label>
+          <input id="i-name" placeholder="XTB SA" />
+        </div>
+      </div>
+      <div class="form-row triple">
+        <div class="field">
+          <label>Ilość</label>
+          <input id="i-qty" type="number" placeholder="10" />
+        </div>
+        <div class="field">
+          <label>Cena zakupu (PLN)</label>
+          <input id="i-price" type="number" step="0.01" placeholder="50.00" />
+        </div>
+        <div class="field">
+          <label>Typ</label>
+          <select id="i-type">
+            <option value="stock">Akcja</option>
+            <option value="etf">ETF</option>
+            <option value="bond">Obligacja</option>
+            <option value="other">Inne</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Źródło cen</label>
+          <select id="i-source">
+            <option value="stooq">Stooq (GPW)</option>
+            <option value="yahoo">Yahoo Finance</option>
+            <option value="manual">Ręcznie</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Waluta</label>
+          <select id="i-currency">
+            <option value="PLN">PLN</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addInstrument('ike')">+ Dodaj instrument</button>
+    </div>
+
+    <div class="section-header">
+      <h2>Instrumenty</h2>
+      <span id="ike-total" style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--green)"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="table-ike">
+        <thead>
+          <tr>
+            <th>Ticker</th><th>Nazwa</th><th>Typ</th>
+            <th class="right">Ilość</th>
+            <th class="right">Cena zakupu</th>
+            <th class="right">Cena akt.</th>
+            <th class="right">Wartość</th>
+            <th class="right">Zmiana</th>
+            <th class="right">Akcje</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-ike"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div id="tab-charts" class="section">
+    <div class="chart-box" style="margin-bottom:16px">
+      <h3>Alokacja — oba portfele łącznie</h3>
+      <canvas id="pie-all"></canvas>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h3>eMakler — alokacja %</h3>
+        <canvas id="pie1b"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>IKE — alokacja %</h3>
+        <canvas id="pie2b"></canvas>
+      </div>
+    </div>
+    <div class="chart-box" style="margin-bottom:16px">
+      <h3>Wartość portfeli vs koszt zakupu</h3>
+      <canvas id="barProfitLoss"></canvas>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="section">
+    <div class="add-panel">
+      <h3>Informacje o tikerach</h3>
+      <p style="font-size:13px;color:var(--text2);line-height:1.7">
+        <strong style="color:var(--accent)">Stooq (GPW):</strong><br>
+        PKN → PKN.PL | CDR → CDR.PL | XTB → XTB.PL | GPW → GPW.PL<br>
+        ETF GPW: ETFSP500 → ETFSP500.PL | ETFDAX → ETFDAX.PL<br><br>
+        <strong style="color:var(--green)">Yahoo Finance:</strong><br>
+        PKN Orlen → PKN.WA | CDR → CDR.WA | XTB → XTB.WA<br>
+        ETF zagraniczne: CSPX (iShares S&P500), VWCE, IWDA<br>
+        Obligacje zagr.: TLT, HYG<br><br>
+        <strong style="color:var(--yellow)">Wskazówka:</strong> Dla akcji GPW używaj Stooq, dla zagranicznych ETF/akcji Yahoo.
+      </p>
+    </div>
+    <div class="add-panel">
+      <h3>Dane aplikacji</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="exportData()">↓ Eksportuj JSON</button>
+        <button class="btn-secondary" onclick="document.getElementById('importFile').click()">↑ Importuj JSON</button>
+        <button class="btn-secondary" onclick="clearAllData()" style="color:var(--red);border-color:var(--red)">✕ Wyczyść dane</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)" />
+    </div>
+  </div>
+
+</main>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edytuj instrument</h3>
+    <input type="hidden" id="edit-id" />
+    <input type="hidden" id="edit-portfolio" />
+    <div class="form-row">
+      <div class="field">
+        <label>Ticker</label>
+        <input id="edit-ticker" style="text-transform:uppercase" />
+      </div>
+      <div class="field">
+        <label>Nazwa</label>
+        <input id="edit-name" />
+      </div>
+    </div>
+    <div class="form-row triple">
+      <div class="field">
+        <label>Ilość</label>
+        <input id="edit-qty" type="number" />
+      </div>
+      <div class="field">
+        <label>Cena zakupu</label>
+        <input id="edit-price" type="number" step="0.01" />
+      </div>
+      <div class="field">
+        <label>Cena akt. (ręcznie)</label>
+        <input id="edit-current" type="number" step="0.01" placeholder="auto" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label>Źródło</label>
+        <select id="edit-source">
+          <option value="stooq">Stooq</option>
+          <option value="yahoo">Yahoo</option>
+          <option value="manual">Ręcznie</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Waluta</label>
+        <select id="edit-currency">
+          <option value="PLN">PLN</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeModal()">Anuluj</button>
+      <button class="btn-primary" onclick="saveEdit()">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div><span class="status-dot" id="statusDot"></span><span id="statusText">Gotowy</span></div>
+  <div id="statusRight" style="color:var(--text3)"></div>
+</div>
+
+<script>
+// ============================================================
+//  DATA MODEL
+// ============================================================
+const PORTFOLIOS = { emakler: [], ike: [] };
+let usdPln = 4.0;  // fallback
+let eurPln = 4.3;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem('portfolio_v3');
+    if (saved) {
+      const d = JSON.parse(saved);
+      PORTFOLIOS.emakler = d.emakler || [];
+      PORTFOLIOS.ike = d.ike || [];
+    }
+  } catch(e) {}
+}
+
+function saveData() {
+  localStorage.setItem('portfolio_v3', JSON.stringify(PORTFOLIOS));
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+}
+
+// ============================================================
+//  TICKER HELPERS — proper suffix for each source
+// ============================================================
+function getStooqTicker(ticker) {
+  // already has suffix
+  if (ticker.includes('.')) return ticker.toLowerCase();
+  return ticker.toLowerCase() + '.pl';
+}
+
+function getYahooTicker(ticker) {
+  if (ticker.includes('.')) return ticker.toUpperCase();
+  // known foreign ETFs / stocks — no suffix
+  const noSuffix = ['CSPX','VWCE','IWDA','EUNL','TLT','HYG','SPY','QQQ','VUSA',
+    'IUSA','SWDA','EMIM','AGGH','IEMG','EEM','GDX','SLV','GLD','PHYS'];
+  if (noSuffix.includes(ticker.toUpperCase())) return ticker.toUpperCase();
+  // GPW stocks — add .WA
+  return ticker.toUpperCase() + '.WA';
+}
+
+// ============================================================
+//  PRICE FETCHING  (CORS proxy → api.allorigins)
+// ============================================================
+const CORS = 'https://api.allorigins.win/get?url=';
+
+async function fetchStooq(ticker) {
+  const sym = getStooqTicker(ticker);
+  const url = `https://stooq.pl/q/l/?s=${sym}&f=sd2t2ohlcv&h&e=csv`;
+  const r = await fetch(CORS + encodeURIComponent(url), {signal: AbortSignal.timeout(8000)});
+  const j = await r.json();
+  const lines = j.contents.trim().split('\n');
+  if (lines.length < 2) throw new Error('Brak danych');
+  const parts = lines[1].split(',');
+  const price = parseFloat(parts[6]); // Close
+  if (!price || isNaN(price)) throw new Error('Nieprawidłowa cena');
+  return { price, source: 'stooq', sym };
+}
+
+async function fetchYahoo(ticker) {
+  const sym = getYahooTicker(ticker);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}?interval=1d&range=1d`;
+  const r = await fetch(CORS + encodeURIComponent(url), {signal: AbortSignal.timeout(8000)});
+  const j = await r.json();
+  const parsed = JSON.parse(j.contents);
+  const meta = parsed?.chart?.result?.[0]?.meta;
+  if (!meta) throw new Error('Brak danych Yahoo');
+  const price = meta.regularMarketPrice || meta.previousClose;
+  if (!price) throw new Error('Brak ceny');
+  const currency = meta.currency;
+  return { price, source: 'yahoo', sym, currency };
+}
+
+async function fetchPrice(instrument) {
+  if (instrument.priceSource === 'manual') {
+    return { price: instrument.currentPrice || instrument.buyPrice, source: 'manual' };
+  }
+  const errors = [];
+  // Primary source
+  try {
+    if (instrument.priceSource === 'stooq') {
+      return await fetchStooq(instrument.ticker);
+    } else {
+      return await fetchYahoo(instrument.ticker);
+    }
+  } catch(e) {
+    errors.push(e.message);
+  }
+  // Fallback to the other source
+  try {
+    if (instrument.priceSource === 'stooq') {
+      return await fetchYahoo(instrument.ticker);
+    } else {
+      return await fetchStooq(instrument.ticker);
+    }
+  } catch(e) {
+    errors.push(e.message);
+  }
+  throw new Error(errors.join(' | '));
+}
+
+// ============================================================
+//  CURRENCY CONVERSION
+// ============================================================
+async function fetchFxRates() {
+  try {
+    const url = 'https://api.exchangerate-api.com/v4/latest/PLN';
+    const r = await fetch(CORS + encodeURIComponent(url), {signal: AbortSignal.timeout(5000)});
+    const j = await r.json();
+    const data = JSON.parse(j.contents);
+    usdPln = 1 / data.rates.USD;
+    eurPln = 1 / data.rates.EUR;
+  } catch(e) {
+    // use fallback values
+  }
+}
+
+function toPln(price, currency) {
+  if (currency === 'USD') return price * usdPln;
+  if (currency === 'EUR') return price * eurPln;
+  return price;
+}
+
+// ============================================================
+//  REFRESH ALL PRICES
+// ============================================================
+let refreshing = false;
+async function refreshAllPrices() {
+  if (refreshing) return;
+  refreshing = true;
+  const btn = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.classList.add('loading');
+  icon.innerHTML = '<span class="spin">↻</span>';
+  setStatus('loading', 'Pobieranie kursów walut...');
+
+  await fetchFxRates();
+
+  const all = [
+    ...PORTFOLIOS.emakler.map(i => ({...i, _p: 'emakler'})),
+    ...PORTFOLIOS.ike.map(i => ({...i, _p: 'ike'}))
+  ];
+
+  let ok = 0, fail = 0;
+  for (const inst of all) {
+    setStatus('loading', `Pobieranie: ${inst.ticker}...`);
+    try {
+      const result = await fetchPrice(inst);
+      // convert if needed
+      const priceInPln = result.source === 'yahoo' && result.currency && result.currency !== 'PLN'
+        ? toPln(result.price, result.currency)
+        : result.price;
+
+      const arr = PORTFOLIOS[inst._p];
+      const idx = arr.findIndex(x => x.id === inst.id);
+      if (idx !== -1) {
+        arr[idx].currentPrice = parseFloat(priceInPln.toFixed(4));
+        arr[idx].lastUpdated = new Date().toLocaleTimeString('pl-PL');
+        arr[idx].priceError = null;
+        arr[idx].priceSrcUsed = result.source + (result.sym ? ` (${result.sym})` : '');
+      }
+      ok++;
+    } catch(e) {
+      const arr = PORTFOLIOS[inst._p];
+      const idx = arr.findIndex(x => x.id === inst.id);
+      if (idx !== -1) arr[idx].priceError = e.message;
+      fail++;
+    }
+  }
+
+  saveData();
+  const now = new Date().toLocaleTimeString('pl-PL');
+  document.getElementById('lastUpdateLabel').textContent = `Ostatnia aktualizacja: ${now}`;
+  setStatus(fail ? 'err' : 'ok', `Zaktualizowano: ${ok}/${all.length} | Błędy: ${fail}`);
+  btn.classList.remove('loading');
+  icon.textContent = '↻';
+  refreshing = false;
+  renderAll();
+}
+
+// ============================================================
+//  ADD / EDIT / DELETE
+// ============================================================
+function addInstrument(portfolio) {
+  const pre = portfolio === 'emakler' ? 'e' : 'i';
+  const ticker = document.getElementById(`${pre}-ticker`).value.trim().toUpperCase();
+  const name   = document.getElementById(`${pre}-name`).value.trim();
+  const qty    = parseFloat(document.getElementById(`${pre}-qty`).value);
+  const price  = parseFloat(document.getElementById(`${pre}-price`).value);
+  const type   = document.getElementById(`${pre}-type`).value;
+  const source = document.getElementById(`${pre}-source`).value;
+  const currency = document.getElementById(`${pre}-currency`).value;
+
+  if (!ticker || isNaN(qty) || isNaN(price)) {
+    alert('Wypełnij: ticker, ilość i cenę zakupu.');
+    return;
+  }
+
+  PORTFOLIOS[portfolio].push({
+    id: genId(),
+    ticker, name: name || ticker,
+    qty, buyPrice: price,
+    currentPrice: null,
+    type, priceSource: source, currency,
+    lastUpdated: null, priceError: null, priceSrcUsed: null
+  });
+
+  saveData();
+  renderAll();
+
+  // clear fields
+  ['ticker','name','qty','price'].forEach(f => document.getElementById(`${pre}-${f}`).value = '');
+}
+
+function deleteInstrument(portfolio, id) {
+  PORTFOLIOS[portfolio] = PORTFOLIOS[portfolio].filter(x => x.id !== id);
+  saveData();
+  renderAll();
+}
+
+let editingPortfolio = null, editingId = null;
+function openEdit(portfolio, id) {
+  const inst = PORTFOLIOS[portfolio].find(x => x.id === id);
+  if (!inst) return;
+  editingPortfolio = portfolio;
+  editingId = id;
+  document.getElementById('edit-ticker').value = inst.ticker;
+  document.getElementById('edit-name').value = inst.name;
+  document.getElementById('edit-qty').value = inst.qty;
+  document.getElementById('edit-price').value = inst.buyPrice;
+  document.getElementById('edit-current').value = inst.currentPrice || '';
+  document.getElementById('edit-source').value = inst.priceSource;
+  document.getElementById('edit-currency').value = inst.currency || 'PLN';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+
+function saveEdit() {
+  const arr = PORTFOLIOS[editingPortfolio];
+  const idx = arr.findIndex(x => x.id === editingId);
+  if (idx === -1) return;
+  arr[idx].ticker = document.getElementById('edit-ticker').value.trim().toUpperCase();
+  arr[idx].name   = document.getElementById('edit-name').value.trim();
+  arr[idx].qty    = parseFloat(document.getElementById('edit-qty').value);
+  arr[idx].buyPrice = parseFloat(document.getElementById('edit-price').value);
+  const cur = document.getElementById('edit-current').value;
+  if (cur) arr[idx].currentPrice = parseFloat(cur);
+  arr[idx].priceSource = document.getElementById('edit-source').value;
+  arr[idx].currency = document.getElementById('edit-currency').value;
+  saveData();
+  renderAll();
+  closeModal();
+}
+
+// ============================================================
+//  RENDER
+// ============================================================
+const COLORS = ['#58a6ff','#3fb950','#bc8cff','#ffa657','#f85149','#d29922',
+  '#79c0ff','#56d364','#d2a8ff','#ffb77c','#ff7b72','#e3b341',
+  '#388bfd','#2ea043','#8957e5','#e16a2b','#da3633','#9e6a03'];
+
+function fmt(n, dec=2) {
+  if (n == null || isNaN(n)) return '—';
+  return n.toLocaleString('pl-PL', {minimumFractionDigits: dec, maximumFractionDigits: dec});
+}
+
+function renderTable(portfolio) {
+  const tbody = document.getElementById(`tbody-${portfolio}`);
+  const instruments = PORTFOLIOS[portfolio];
+  if (!instruments.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty">Brak instrumentów. Dodaj pierwszy powyżej.</td></tr>`;
+    document.getElementById(`${portfolio}-total`).textContent = '';
+    return;
+  }
+
+  let totalValue = 0, totalCost = 0;
+  let html = '';
+  for (const inst of instruments) {
+    const cp = inst.currentPrice;
+    const val = cp ? cp * inst.qty : null;
+    const cost = inst.buyPrice * inst.qty;
+    const pct = cp ? ((cp - inst.buyPrice) / inst.buyPrice * 100) : null;
+    if (val) { totalValue += val; }
+    totalCost += cost;
+
+    const pctStr = pct != null
+      ? `<span class="${pct >= 0 ? 'pos-pct' : 'neg-pct'}">${pct >= 0 ? '+' : ''}${fmt(pct)}%</span>`
+      : '—';
+
+    const typeMap = {stock:'badge-stock',etf:'badge-etf',bond:'badge-bond',other:''};
+    const typeLabelMap = {stock:'Akcja',etf:'ETF',bond:'Obligacja',other:'Inne'};
+
+    const priceCell = inst.priceError
+      ? `<span class="price-error" title="${inst.priceError}">Błąd ⚠</span>`
+      : cp != null
+        ? `<span class="price-ok">${fmt(cp)} <span class="src-tag">${inst.priceSrcUsed||''}</span></span>`
+        : '<span class="price-loading">oczekuje...</span>';
+
+    html += `<tr>
+      <td><span class="ticker-cell">${inst.ticker}</span></td>
+      <td><span class="name-cell">${inst.name}</span>${inst.lastUpdated ? `<div class="last-update">${inst.lastUpdated}</div>` : ''}</td>
+      <td><span class="badge ${typeMap[inst.type]||''}">${typeLabelMap[inst.type]||inst.type}</span></td>
+      <td class="right">${fmt(inst.qty, inst.qty % 1 === 0 ? 0 : 4)}</td>
+      <td class="right">${fmt(inst.buyPrice)} PLN</td>
+      <td class="right">${priceCell}</td>
+      <td class="right">${val != null ? fmt(val) + ' PLN' : '—'}</td>
+      <td class="right">${pctStr}</td>
+      <td class="right">
+        <div class="acts">
+          <button class="act-btn" onclick="openEdit('${portfolio}','${inst.id}')" title="Edytuj">✏️</button>
+          <button class="act-btn del" onclick="deleteInstrument('${portfolio}','${inst.id}')" title="Usuń">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }
+  tbody.innerHTML = html;
+
+  const totalEl = document.getElementById(`${portfolio}-total`);
+  const gain = totalValue - totalCost;
+  const gainPct = totalCost ? gain / totalCost * 100 : 0;
+  totalEl.innerHTML = `Wartość: <strong>${fmt(totalValue)} PLN</strong> &nbsp;|&nbsp; Wynik: <span class="${gain>=0?'pos-pct':'neg-pct'}">${gain>=0?'+':''}${fmt(gain)} PLN (${fmt(gainPct)}%)</span>`;
+}
+
+function calcPortfolio(portfolio) {
+  const insts = PORTFOLIOS[portfolio];
+  let totalValue = 0, totalCost = 0;
+  for (const i of insts) {
+    totalCost += i.buyPrice * i.qty;
+    if (i.currentPrice) totalValue += i.currentPrice * i.qty;
+  }
+  return { totalValue, totalCost, gain: totalValue - totalCost, gainPct: totalCost ? (totalValue - totalCost)/totalCost*100 : 0 };
+}
+
+function renderDashCards() {
+  const e = calcPortfolio('emakler');
+  const k = calcPortfolio('ike');
+  const total = e.totalValue + k.totalValue;
+  const totalCost = e.totalCost + k.totalCost;
+  const totalGain = total - totalCost;
+  const totalGainPct = totalCost ? totalGain / totalCost * 100 : 0;
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card">
+      <div class="card-label">eMakler mBank</div>
+      <div class="card-value ${e.gain>=0?'pos':'neg'}">${fmt(e.totalValue)} PLN</div>
+      <div class="card-sub">Wynik: ${e.gain>=0?'+':''}${fmt(e.gain)} PLN (${fmt(e.gainPct)}%)</div>
+    </div>
+    <div class="card">
+      <div class="card-label">IKE XTB</div>
+      <div class="card-value ${k.gain>=0?'pos':'neg'}">${fmt(k.totalValue)} PLN</div>
+      <div class="card-sub">Wynik: ${k.gain>=0?'+':''}${fmt(k.gain)} PLN (${fmt(k.gainPct)}%)</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Łącznie</div>
+      <div class="card-value neu">${fmt(total)} PLN</div>
+      <div class="card-sub">Koszt: ${fmt(totalCost)} PLN</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Łączny wynik</div>
+      <div class="card-value ${totalGain>=0?'pos':'neg'}">${totalGain>=0?'+':''}${fmt(totalGain)} PLN</div>
+      <div class="card-sub">${fmt(totalGainPct)}% od zakupu</div>
+    </div>
+  `;
+}
+
+// Chart instances
+const charts = {};
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function makePieChart(canvasId, portfolio) {
+  const insts = PORTFOLIOS[portfolio];
+  destroyChart(canvasId);
+  if (!insts.length) return;
+  const labels = insts.map(i => i.ticker);
+  const data = insts.map(i => i.currentPrice ? i.currentPrice * i.qty : i.buyPrice * i.qty);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: COLORS.slice(0, insts.length), borderWidth: 2, borderColor: '#161b22' }] },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 11, family: 'IBM Plex Mono' }, padding: 8 } },
+        tooltip: { callbacks: { label: (ctx) => {
+          const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+          const pct = (ctx.raw/total*100).toFixed(1);
+          return ` ${ctx.label}: ${fmt(ctx.raw)} PLN (${pct}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+function makeBarCompare(canvasId) {
+  destroyChart(canvasId);
+  const e = calcPortfolio('emakler');
+  const k = calcPortfolio('ike');
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['eMakler mBank', 'IKE XTB'],
+      datasets: [
+        { label: 'Koszt zakupu', data: [e.totalCost, k.totalCost], backgroundColor: 'rgba(48,54,61,0.8)', borderRadius: 4 },
+        { label: 'Wartość bieżąca', data: [e.totalValue, k.totalValue], backgroundColor: ['rgba(88,166,255,0.8)','rgba(63,185,80,0.8)'], borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      scales: {
+        x: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(48,54,61,0.4)' } },
+        y: { ticks: { color: '#8b949e', callback: v => fmt(v,0)+' PLN' }, grid: { color: 'rgba(48,54,61,0.4)' } }
+      },
+      plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } }
+    }
+  });
+}
+
+function makeBarProfitLoss(canvasId) {
+  destroyChart(canvasId);
+  const all = [...PORTFOLIOS.emakler, ...PORTFOLIOS.ike];
+  if (!all.length) return;
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const labels = all.map(i => i.ticker);
+  const costs = all.map(i => i.buyPrice * i.qty);
+  const values = all.map(i => (i.currentPrice || i.buyPrice) * i.qty);
+  const gains = values.map((v,idx) => v - costs[idx]);
+  charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Koszt', data: costs, backgroundColor: 'rgba(48,54,61,0.8)', borderRadius: 3 },
+        { label: 'Wartość', data: values, backgroundColor: values.map((v,i)=>v>=costs[i]?'rgba(63,185,80,0.7)':'rgba(248,81,73,0.7)'), borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: 'rgba(48,54,61,0.4)' } },
+        y: { ticks: { color: '#8b949e', callback: v => fmt(v,0) }, grid: { color: 'rgba(48,54,61,0.4)' } }
+      },
+      plugins: { legend: { labels: { color: '#8b949e', font: { size: 11 } } } }
+    }
+  });
+}
+
+function makePieAll(canvasId) {
+  destroyChart(canvasId);
+  const all = [
+    ...PORTFOLIOS.emakler.map(i=>({...i,_p:'E'})),
+    ...PORTFOLIOS.ike.map(i=>({...i,_p:'K'}))
+  ];
+  if (!all.length) return;
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const labels = all.map(i => `${i.ticker} [${i._p}]`);
+  const data = all.map(i => (i.currentPrice||i.buyPrice)*i.qty);
+  charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: COLORS.slice(0, all.length), borderWidth: 2, borderColor: '#161b22' }] },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 10, family: 'IBM Plex Mono' }, padding: 6 } },
+        tooltip: { callbacks: { label: (ctx) => {
+          const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+          return ` ${ctx.label}: ${fmt(ctx.raw)} PLN (${(ctx.raw/total*100).toFixed(1)}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+function renderAll() {
+  renderTable('emakler');
+  renderTable('ike');
+  renderDashCards();
+  makePieChart('pie1', 'emakler');
+  makePieChart('pie2', 'ike');
+  makeBarCompare('barCompare');
+  makePieAll('pie-all');
+  makePieChart('pie1b', 'emakler');
+  makePieChart('pie2b', 'ike');
+  makeBarProfitLoss('barProfitLoss');
+}
+
+// ============================================================
+//  TABS
+// ============================================================
+function switchTab(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  const tabLabels = {dashboard:0, emakler:1, ike:2, charts:3, settings:4};
+  document.querySelectorAll('.tab')[tabLabels[name]].classList.add('active');
+  // re-render charts on switch
+  setTimeout(renderAll, 50);
+}
+
+// ============================================================
+//  STATUS
+// ============================================================
+function setStatus(state, text, right='') {
+  const dot = document.getElementById('statusDot');
+  dot.className = 'status-dot ' + state;
+  document.getElementById('statusText').textContent = text;
+  if (right) document.getElementById('statusRight').textContent = right;
+}
+
+// ============================================================
+//  EXPORT / IMPORT
+// ============================================================
+function exportData() {
+  const json = JSON.stringify(PORTFOLIOS, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `portfele_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.emakler) PORTFOLIOS.emakler = d.emakler;
+      if (d.ike) PORTFOLIOS.ike = d.ike;
+      saveData();
+      renderAll();
+      setStatus('ok', 'Dane zaimportowane');
+    } catch(err) { alert('Błąd importu: ' + err.message); }
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData() {
+  if (confirm('Czy na pewno chcesz usunąć WSZYSTKIE dane portfeli?')) {
+    PORTFOLIOS.emakler = [];
+    PORTFOLIOS.ike = [];
+    saveData();
+    renderAll();
+    setStatus('ok', 'Dane wyczyszczone');
+  }
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+loadData();
+renderAll();
+setStatus('ok', 'Gotowy — kliknij Odśwież ceny');
+</script>
+</body>
+</html>
