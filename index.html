@@ -190,8 +190,6 @@
         <div class="field"><label>Typ</label>
           <select id="e-type"><option value="stock">Akcja</option><option value="etf">ETF</option><option value="bond">Obligacja</option><option value="other">Inne</option></select>
         </div>
-        <div class="field"><label>Waluta notowań</label>
-          <select id="e-currency"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
         </div>
       </div>
       <button class="btn-primary" onclick="addInstrument('emakler')">+ Dodaj instrument</button>
@@ -232,8 +230,6 @@
         <div class="field"><label>Typ</label>
           <select id="i-type"><option value="stock">Akcja</option><option value="etf">ETF</option><option value="bond">Obligacja</option><option value="other">Inne</option></select>
         </div>
-        <div class="field"><label>Waluta notowań</label>
-          <select id="i-currency"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
         </div>
       </div>
       <button class="btn-primary" onclick="addInstrument('ike')">+ Dodaj instrument</button>
@@ -409,9 +405,6 @@
       <div class="field"><label>Typ</label>
         <select id="edit-type"><option value="stock">Akcja</option><option value="etf">ETF</option><option value="bond">Obligacja</option><option value="other">Inne</option></select>
       </div>
-      <div class="field"><label>Waluta</label>
-        <select id="edit-currency"><option value="PLN">PLN</option><option value="USD">USD</option><option value="EUR">EUR</option></select>
-      </div>
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModal('editModal')">Anuluj</button>
@@ -585,9 +578,8 @@ function addInstrument(portfolio){
   const price=parseFloat(document.getElementById(`${p}-price`).value);
   const date=document.getElementById(`${p}-date`).value;
   const type=document.getElementById(`${p}-type`).value;
-  const currency=document.getElementById(`${p}-currency`).value;
   if(!ticker||isNaN(qty)||isNaN(price)){alert('Wypełnij: ticker, ilość i cenę zakupu.');return;}
-  DB.portfolios[portfolio].push({id:genId(),ticker,name:name||ticker,qty,buyPrice:price,buyDate:date||null,currentPrice:null,type,currency,lastUpdated:null,priceError:null,priceSrcUsed:null});
+  DB.portfolios[portfolio].push({id:genId(),ticker,name:name||ticker,qty,buyPrice:price,buyDate:date||null,currentPrice:null,type,lastUpdated:null,priceError:null,priceSrcUsed:null});
   DB.transactions.push({id:genId(),type:'buy',portfolio,ticker,date:date||new Date().toISOString().slice(0,10),qty,price,commission:0,note:'Dodanie instrumentu'});
   saveData();renderAll();
   ['ticker','name','qty','price'].forEach(f=>{const el=document.getElementById(`${p}-${f}`);if(el)el.value='';});
@@ -609,7 +601,6 @@ function openEdit(portfolio,id){
   document.getElementById('edit-price').value=inst.buyPrice;
   document.getElementById('edit-current').value=inst.currentPrice||'';
   document.getElementById('edit-type').value=inst.type;
-  document.getElementById('edit-currency').value=inst.currency||'PLN';
   document.getElementById('editModal').classList.add('open');
 }
 function saveEdit(){
@@ -620,7 +611,6 @@ function saveEdit(){
   arr[idx].buyPrice=parseFloat(document.getElementById('edit-price').value);
   const cur=document.getElementById('edit-current').value;if(cur) arr[idx].currentPrice=parseFloat(cur);
   arr[idx].type=document.getElementById('edit-type').value;
-  arr[idx].currency=document.getElementById('edit-currency').value;
   saveData();renderAll();closeModal('editModal');
 }
 
